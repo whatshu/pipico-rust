@@ -77,19 +77,41 @@ minicom -D /dev/ttyUSB0 -b 115200
 ### 预期输出
 
 ```
-=== RP2040 Dual Core Demo ===
-UART0 Baud Rate: 115200
-Starting dual core tasks...
+=====================================
+  RP2040 Dual Core UART Demo
+  Embassy Async Framework
+=====================================
+UART0 Config:
+  - Baud Rate: 115200
+  - TX: GPIO0, RX: GPIO1
+  - Data: 8N1
+=====================================
+Log Format:
+  [uptime_ms] [Core] [LEVEL] message
+=====================================
 
-[Core 0] Running... count = 0
-[Core 1] Running... count = 0
-[Core 0] Running... count = 1
-[Core 1] Running... count = 1
-[Core 0] Running... count = 2
-[Core 0] Running... count = 3
-[Core 1] Running... count = 2
+[       0ms] [Core0] [INFO ] Initializing Core 0 executor
+[       1ms] [Core0] [INFO ] System startup complete
+[       2ms] [Core0] [INFO ] Task started
+[       3ms] [Core1] [INFO ] Task started
+[       4ms] [Core0] [INFO ] Heartbeat, count=0
+[    1004ms] [Core0] [INFO ] Heartbeat, count=1
+[    1505ms] [Core1] [INFO ] Heartbeat, count=1
+[    2005ms] [Core0] [INFO ] Heartbeat, count=2
+[    3005ms] [Core0] [INFO ] Heartbeat, count=3
+[    3006ms] [Core1] [INFO ] Heartbeat, count=2
+[    4006ms] [Core0] [INFO ] Heartbeat, count=4
+...
+[   10010ms] [Core0] [INFO ] Heartbeat, count=10
+[   10010ms] [Core0] [DEBUG] Milestone reached: 10
 ...
 ```
+
+**日志格式说明：**
+- `[uptime_ms]`: 系统运行时间（毫秒）
+- `[Core]`: Core0 或 Core1
+- `[LEVEL]`: INFO, DEBUG, WARN, ERROR
+- `message`: 日志消息内容
 
 ## 核心依赖
 
