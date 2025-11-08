@@ -1,5 +1,4 @@
 pub mod serial;
-pub mod storage;
 pub mod hid;
 
 use defmt::*;

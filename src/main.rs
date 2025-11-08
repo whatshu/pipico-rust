@@ -30,11 +30,8 @@ bind_interrupts!(struct Irqs {
 static mut CORE1_STACK: Stack<CORE1_STACK_SIZE> = Stack::new();
 static EXECUTOR1: StaticCell<embassy_executor::Executor> = StaticCell::new();
 
-// USB 驱动和构建器的静态存储
-static USB_DRIVER: StaticCell<embassy_rp::usb::Driver<'static, USB>> = StaticCell::new();
-static USB_DEVICE: StaticCell<embassy_usb::UsbDevice<'static, embassy_rp::usb::Driver<'static, USB>>> = StaticCell::new();
-static STORAGE_HANDLER: StaticCell<usb::storage::StorageHandler> = StaticCell::new();
-static HID_REQUEST_HANDLER: StaticCell<usb::hid::HidRequestHandler> = StaticCell::new();
+// 注意：之前的 USB_DRIVER, USB_DEVICE, HID_REQUEST_HANDLER 等静态变量已移到 usb_composite_task 中
+// 避免全局静态变量，使用函数内部的 StaticCell 更安全
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) {
@@ -69,13 +66,8 @@ async fn main(spawner: Spawner) {
 
     log_info!("Main", "System initialization starting...");
 
-    // 初始化 USB
+    // 初始化 USB 复合设备
     log_info!("Main", "Initializing USB composite device...");
-    
-    // 注意：USB 存储设备 (MSC) 目前在 embassy-usb 0.3.0 中不支持
-    let _storage_handler = STORAGE_HANDLER.init(usb::storage::StorageHandler::new());
-    
-    // 创建并启动 USB 复合设备
     spawner.spawn(usb_composite_task(p.USB)).unwrap();
     
     log_info!("Main", "USB composite device task spawned");
@@ -102,7 +94,7 @@ async fn main(spawner: Spawner) {
     log_info!("Main", "====================================");
     log_info!("Main", "System startup complete!");
     log_info!("Main", "- UART0: GPIO0(TX) / GPIO1(RX)");
-    log_info!("Main", "- USB: CDC-ACM + HID Keyboard + HID Mouse");
+    log_info!("Main", "- USB: CDC-ACM + HID Keyboard");
     log_info!("Main", "- Dual Core: Core0 + Core1 running");
     log_info!("Main", "====================================");
 }
@@ -147,18 +139,15 @@ async fn usb_composite_task(usb_periph: USB) {
     let cdc_acm = usb::serial::create_cdc_acm(&mut builder, cdc_state);
     log_info_sync!("USB", "CDC-ACM serial port created");
     
-    // 创建 USB HID (键盘和鼠标)
+    // 创建 USB HID 键盘
     static HID_HANDLER: StaticCell<usb::hid::HidRequestHandler> = StaticCell::new();
     static KEYBOARD_STATE: StaticCell<embassy_usb::class::hid::State> = StaticCell::new();
-    static MOUSE_STATE: StaticCell<embassy_usb::class::hid::State> = StaticCell::new();
     
     let hid_handler = HID_HANDLER.init(usb::hid::HidRequestHandler {});
     let keyboard_state = KEYBOARD_STATE.init(embassy_usb::class::hid::State::new());
-    let mouse_state = MOUSE_STATE.init(embassy_usb::class::hid::State::new());
     
     let keyboard = usb::hid::create_keyboard_hid(&mut builder, keyboard_state, hid_handler);
-    let mouse = usb::hid::create_mouse_hid(&mut builder, mouse_state);
-    log_info_sync!("USB", "HID keyboard and mouse created");
+    log_info_sync!("USB", "HID keyboard created");
     
     // 构建 USB 设备
     let mut usb_device = builder.build();
@@ -170,11 +159,10 @@ async fn usb_composite_task(usb_periph: USB) {
     let usb_fut = usb_device.run();
     let cdc_fut = usb::serial::run_cdc_acm(cdc_acm);
     let keyboard_fut = usb::hid::run_keyboard(keyboard);
-    let mouse_fut = usb::hid::run_mouse(mouse);
     
-    log_info_sync!("USB", "All USB tasks starting...");
+    log_info_sync!("USB", "All USB tasks starting (Serial + Keyboard)...");
     
-    embassy_futures::join::join4(usb_fut, cdc_fut, keyboard_fut, mouse_fut).await;
+    embassy_futures::join::join3(usb_fut, cdc_fut, keyboard_fut).await;
     
     log_error_sync!("USB", "USB tasks exited unexpectedly!");
 }

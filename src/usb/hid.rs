@@ -4,7 +4,7 @@ use embassy_usb::class::hid::{HidWriter, ReportId, RequestHandler, State};
 use embassy_usb::control::OutResponse;
 use embassy_usb::driver::Driver;
 use embassy_usb::Builder;
-use usbd_hid::descriptor::{KeyboardReport, MouseReport, SerializedDescriptor};
+use usbd_hid::descriptor::{KeyboardReport, SerializedDescriptor};
 
 /// HID 请求处理器
 pub struct HidRequestHandler {}
@@ -48,22 +48,8 @@ pub fn create_keyboard_hid<'d, D: Driver<'d>>(
     )
 }
 
-/// 创建鼠标 HID
-pub fn create_mouse_hid<'d, D: Driver<'d>>(
-    builder: &mut Builder<'d, D>,
-    state: &'d mut State<'d>,
-) -> HidWriter<'d, D, 4> {
-    HidWriter::<_, 4>::new(
-        builder,
-        state,
-        embassy_usb::class::hid::Config {
-            report_descriptor: MouseReport::desc(),
-            request_handler: None,
-            poll_ms: 10,
-            max_packet_size: 4,
-        },
-    )
-}
+// 鼠标 HID 已删除
+// 如果需要鼠标功能，请参考 embassy-usb HID 示例
 
 /// 运行键盘 HID (演示：定期发送按键)
 pub async fn run_keyboard<'d, D: Driver<'d>>(
@@ -96,28 +82,4 @@ pub async fn run_keyboard<'d, D: Driver<'d>>(
     }
 }
 
-/// 运行鼠标 HID (演示：定期移动鼠标)
-pub async fn run_mouse<'d, D: Driver<'d>>(
-    mut mouse: HidWriter<'d, D, 4>,
-) {
-    info!("USB Mouse task started");
-    crate::log_info_sync!("USB-Mouse", "HID Mouse task running");
-    crate::log_info_sync!("USB-Mouse", "Will move mouse right 50px every 3 seconds");
-    
-    let mut count = 0u32;
-    loop {
-        Timer::after_secs(3).await;
-        count += 1;
-        
-        // 移动鼠标 (buttons, x, y, wheel)
-        let report = [0, 50, 0, 0]; // 向右移动 50 像素（更明显）
-        if let Err(e) = mouse.write(&report).await {
-            warn!("Mouse write error: {:?}", e);
-            crate::log_error_sync!("USB-Mouse", "Write error: {:?}", e);
-            continue;
-        }
-        
-        info!("Sent mouse report #{}", count);
-        crate::log_debug_sync!("USB-Mouse", "Moved mouse (count: {})", count);
-    }
-}
+// 鼠标功能已删除
