@@ -94,7 +94,13 @@ async fn main(spawner: Spawner) {
     log_info!("Main", "====================================");
     log_info!("Main", "System startup complete!");
     log_info!("Main", "- UART0: GPIO0(TX) / GPIO1(RX)");
-    log_info!("Main", "- USB: CDC-ACM + HID Keyboard");
+    
+    #[cfg(feature = "usb-serial")]
+    log_info!("Main", "- USB: HID Keyboard + CDC-ACM Serial");
+    
+    #[cfg(not(feature = "usb-serial"))]
+    log_info!("Main", "- USB: HID Keyboard only");
+    
     log_info!("Main", "- Dual Core: Core0 + Core1 running");
     log_info!("Main", "====================================");
 }
@@ -105,7 +111,12 @@ async fn usb_composite_task(usb_periph: USB) {
     // 等待一下让日志系统稳定
     embassy_time::Timer::after_millis(50).await;
     
-    log_info_sync!("USB", "USB composite device task started");
+    #[cfg(feature = "usb-serial")]
+    log_info_sync!("USB", "USB composite device task started (HID + CDC-ACM)");
+    
+    #[cfg(not(feature = "usb-serial"))]
+    log_info_sync!("USB", "USB device task started (HID only)");
+    
     info!("USB task: Initializing driver");
     
     // 初始化 USB 驱动
@@ -133,11 +144,15 @@ async fn usb_composite_task(usb_periph: USB) {
     );
     log_info_sync!("USB", "USB builder created");
     
-    // 创建 USB 串口 (CDC-ACM)
-    static CDC_STATE: StaticCell<embassy_usb::class::cdc_acm::State> = StaticCell::new();
-    let cdc_state = CDC_STATE.init(embassy_usb::class::cdc_acm::State::new());
-    let cdc_acm = usb::serial::create_cdc_acm(&mut builder, cdc_state);
-    log_info_sync!("USB", "CDC-ACM serial port created");
+    // 创建 USB 串口 (CDC-ACM) - 仅在启用 feature 时
+    #[cfg(feature = "usb-serial")]
+    let cdc_acm = {
+        static CDC_STATE: StaticCell<embassy_usb::class::cdc_acm::State> = StaticCell::new();
+        let cdc_state = CDC_STATE.init(embassy_usb::class::cdc_acm::State::new());
+        let cdc = usb::serial::create_cdc_acm(&mut builder, cdc_state);
+        log_info_sync!("USB", "CDC-ACM serial port created");
+        cdc
+    };
     
     // 创建 USB HID 键盘
     static HID_HANDLER: StaticCell<usb::hid::HidRequestHandler> = StaticCell::new();
@@ -151,18 +166,32 @@ async fn usb_composite_task(usb_periph: USB) {
     
     // 构建 USB 设备
     let mut usb_device = builder.build();
-    log_info_sync!("USB", "USB composite device built successfully");
+    
+    #[cfg(feature = "usb-serial")]
+    log_info_sync!("USB", "USB composite device built successfully (HID + CDC-ACM)");
+    
+    #[cfg(not(feature = "usb-serial"))]
+    log_info_sync!("USB", "USB device built successfully (HID only)");
+    
     log_info_sync!("USB", "Waiting for USB enumeration...");
     info!("USB: Device ready, starting main loop");
     
     // 运行 USB 设备和各个类
     let usb_fut = usb_device.run();
-    let cdc_fut = usb::serial::run_cdc_acm(cdc_acm);
     let keyboard_fut = usb::hid::run_keyboard(keyboard);
     
-    log_info_sync!("USB", "All USB tasks starting (Serial + Keyboard)...");
+    #[cfg(feature = "usb-serial")]
+    {
+        let cdc_fut = usb::serial::run_cdc_acm(cdc_acm);
+        log_info_sync!("USB", "All USB tasks starting (HID + CDC-ACM)...");
+        embassy_futures::join::join3(usb_fut, cdc_fut, keyboard_fut).await;
+    }
     
-    embassy_futures::join::join3(usb_fut, cdc_fut, keyboard_fut).await;
+    #[cfg(not(feature = "usb-serial"))]
+    {
+        log_info_sync!("USB", "All USB tasks starting (HID only)...");
+        embassy_futures::join::join(usb_fut, keyboard_fut).await;
+    }
     
     log_error_sync!("USB", "USB tasks exited unexpectedly!");
 }

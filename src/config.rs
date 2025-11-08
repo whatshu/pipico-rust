@@ -6,9 +6,11 @@ pub mod uart {
     pub const BAUD_RATE: u32 = 115200;
     
     /// TX 引脚（GPIO0）
+    #[allow(dead_code)]
     pub const TX_PIN: u8 = 0;
     
     /// RX 引脚（GPIO1）
+    #[allow(dead_code)]
     pub const RX_PIN: u8 = 1;
 }
 

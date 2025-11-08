@@ -1,3 +1,6 @@
+// 仅在启用 usb-serial feature 时编译此模块
+#![cfg(feature = "usb-serial")]
+
 use defmt::*;
 use embassy_usb::class::cdc_acm::{CdcAcmClass, State};
 use embassy_usb::driver::Driver;
