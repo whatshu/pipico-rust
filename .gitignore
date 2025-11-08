@@ -4,4 +4,4 @@ Cargo.lock
 *.pdb
 .vscode/
 .idea/
-
+*.uf2

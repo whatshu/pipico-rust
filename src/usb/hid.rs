@@ -64,21 +64,21 @@ pub async fn run_keyboard<'d, D: Driver<'d>>(
         Timer::after_secs(5).await;
         count += 1;
         
-        // 发送 'H' 键 (HID 键码 0x0B)
-        let report = [0, 0, 0x0B, 0, 0, 0, 0, 0]; // modifier, reserved, keycodes...
-        if let Err(e) = keyboard.write(&report).await {
-            warn!("Keyboard write error: {:?}", e);
-            crate::log_error_sync!("USB-Keyboard", "Write error: {:?}", e);
-            continue;
-        }
+        // // 发送 'H' 键 (HID 键码 0x0B)
+        // let report = [0, 0, 0x0B, 0, 0, 0, 0, 0]; // modifier, reserved, keycodes...
+        // if let Err(e) = keyboard.write(&report).await {
+        //     warn!("Keyboard write error: {:?}", e);
+        //     crate::log_error_sync!("USB-Keyboard", "Write error: {:?}", e);
+        //     continue;
+        // }
         
-        // 释放按键
-        Timer::after_millis(50).await;
-        let release = [0, 0, 0, 0, 0, 0, 0, 0];
-        let _ = keyboard.write(&release).await;
+        // // 释放按键
+        // Timer::after_millis(50).await;
+        // let release = [0, 0, 0, 0, 0, 0, 0, 0];
+        // let _ = keyboard.write(&release).await;
         
-        info!("Sent keyboard report #{}", count);
-        crate::log_debug_sync!("USB-Keyboard", "Sent 'H' key (count: {})", count);
+        info!("Sent dummy keyboard report #{}", count);
+        crate::log_debug_sync!("USB-Keyboard", "Sent dummy 'H' key (count: {})", count);
     }
 }
 
