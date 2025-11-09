@@ -66,29 +66,41 @@ elf2uf2-rs target/thumbv6m-none-eabi/release/rp1-embassy
 
 ## Windows 用户注意事项
 
-### 🔥 最新修复（v3 - 2025-11-08）
+### 🔥 最终修复（v4 - 2025-11-08）
 
-已修改 USB Device Class 配置以提高 Windows 兼容性：
-- **之前**: 0xEF (Miscellaneous) - 某些 Windows 版本不兼容
-- **现在**: 0x02 (CDC) - 更好的兼容性
+已找到 CDC + HID 双功能的完美配置！
 
-### 如果遇到"错误 10"
+**Device Class 配置演进：**
+- v1: 0xEF → HID ✅, CDC ❌（Windows 错误 10）
+- v2: 0x02 → CDC ✅, HID ❌（整个设备被识别为 CDC）
+- v3: **0x00 → CDC ✅, HID ✅**（接口级定义，完美！）
 
-1. **清除 USB 驱动缓存**（关键！）
+**核心修复：**
+```
+Device Class: 0x00 (由接口定义)
+├─ Interface 0-1: CDC (通过 IAD 关联) → COM 端口
+└─ Interface 2: HID → 键盘设备
+```
+
+### 测试新固件
+
+1. **清除所有旧驱动**（必须！）
    - 设备管理器 → 查看 → 显示隐藏的设备
-   - 卸载所有 VID:2E8A 设备
+   - 卸载所有 VID:2E8A 设备（包括 PID:000A 和 000C）
    - ✅ 勾选"删除此设备的驱动程序软件"
    - **重启 Windows**
    
 2. **烧录最新固件**
    ```bash
    make clean
-   make build-serial  # 使用新的 Device Class 0x02
+   make build-serial  # Device Class 0x00
    ```
 
-3. **快速测试指南**
-   - `QUICK_TEST.md` - 3 步骤快速验证
-   - `WINDOWS_CDC_FIX_V2.md` - 完整修复方案
+3. **验证两个功能**
+   - ✅ 端口 (COM) → USB Serial Device
+   - ✅ 人体学输入设备 → HID-compliant device
+
+**详细指南**: `FINAL_TEST.md` - 完整的测试和诊断步骤
 
 **建议**：日常使用默认 HID 模式，通过 UART0 查看日志。
 

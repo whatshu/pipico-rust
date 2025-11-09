@@ -47,22 +47,23 @@ pub fn create_usb_config() -> Config<'static> {
         // 复合设备配置 (CDC + HID)
         // Windows 兼容性的关键配置！
         
-        // 🔥 尝试方案1: 使用 CDC 作为主类（更兼容某些 Windows 版本）
-        // 这种配置在一些 Windows 系统上更可靠
-        config.device_class = 0x02;    // CDC (Communications Device Class)
+        // ✅ 最佳方案：Device Class = 0x00 (由接口定义)
+        // 这样 Windows 会分别识别每个接口：CDC 和 HID
+        // 避免整个设备被识别为单一类型
+        config.device_class = 0x00;    // 由接口定义
         config.device_sub_class = 0x00;
         config.device_protocol = 0x00;
         
-        // 方案2: 使用 IAD 标准复合设备（需要 Windows Vista SP2+）
-        // 如果方案1仍然失败，取消注释下面的代码并注释掉上面的
-        // config.device_class = 0xEF;    // Miscellaneous Device
-        // config.device_sub_class = 0x02; // Common Class
-        // config.device_protocol = 0x01;  // Interface Association Descriptor
-        
         // 注意：embassy-usb 会自动为 CDC-ACM 添加 IAD
-        // CDC-ACM 必须先创建（占用接口 0 和 1）
-        // HID 必须后创建（占用接口 2）
-        // 接口顺序很重要！Windows 对此非常敏感
+        // 即使 Device Class 是 0x00，IAD 仍然会正确生成
+        // CDC-ACM 占用接口 0 和 1（通过 IAD 关联）
+        // HID 占用接口 2（独立接口）
+        // Windows 会正确识别两个独立的功能
+        
+        // 之前尝试的方案：
+        // - 0x02 (CDC): 串口工作，但 HID 被忽略
+        // - 0xEF (IAD): HID 工作，但某些 Windows 上串口不工作  
+        // - 0x00 (Interface): 两者都应该工作！
     }
     
     #[cfg(not(feature = "usb-serial"))]
