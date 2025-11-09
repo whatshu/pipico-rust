@@ -3,11 +3,6 @@ name = "rp1-embassy"
 version = "0.1.0"
 edition = "2021"
 
-[features]
-default = []
-# USB 串口功能 (用于调试)
-usb-serial = []
-
 [dependencies]
 embassy-executor = { version = "0.6.0", features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "integrated-timers"] }
 embassy-time = { version = "0.3.2", features = ["defmt"] }
