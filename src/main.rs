@@ -6,6 +6,7 @@ mod config;
 mod logger;
 mod tasks;
 mod usb;
+mod executor;
 
 use embassy_executor::Spawner;
 use embassy_rp::bind_interrupts;
